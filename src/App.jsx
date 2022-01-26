@@ -90,18 +90,6 @@ function App() {
     }, 500)
   }
 
-  const getStatusText = () => {
-    let statusText = STATUS_TEXTS[GAME_STATES.default]
-
-    if (word.length > 0) {
-      statusText = word.map(item => item.char).join('')
-    } else {
-      statusText = STATUS_TEXTS[GAME_STATES[gameState]]
-    }
-
-    return statusText
-  }
-
   return (
     <div className="App">
       <div className="inner">
@@ -131,7 +119,11 @@ function App() {
 
         <div className="controls">
           <div>
-            {getStatusText()}
+            {
+              gameState === GAME_STATES.default && word.length > 0
+                ? word.map(item => item.char).join('')
+                : STATUS_TEXTS[GAME_STATES[gameState]]
+            }
           </div>
 
           <div>
