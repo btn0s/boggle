@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import styled from 'styled-components'
 
 import dictionary from './dictionary.json'
-
 import './App.css'
 
 /* 
@@ -18,8 +18,16 @@ import './App.css'
 const GRID_ROWS = 4
 const GRID_COLS = 4
 const WORD_MIN_LENGTH = 3
+const END_GAME_RESET_DELAY = 1000
+
 const GAME_STATES = {
   default: 'default',
+  win: 'win',
+  loss: 'loss'
+}
+const LETTER_STATES = {
+  default: 'default',
+  selected: 'selected',
   win: 'win',
   loss: 'loss'
 }
@@ -29,34 +37,127 @@ const STATUS_TEXTS = {
   [GAME_STATES.loss]: 'Not a word. Try again.',
 }
 
+const LETTER_STATE_COLORS = {
+  [LETTER_STATES.default]: { border: 'black', background: 'white' },
+  [LETTER_STATES.selected]: { border: 'navy', background: 'lightsteelblue' },
+  [LETTER_STATES.win]: { border: 'darkgreen', background: 'lightgreen' },
+  [LETTER_STATES.loss]: { border: 'darkred', background: 'lightpink' },
+}
+
+const Game = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  `
+const GameInner = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  max-width: 500px;
+`
+const GameBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+`
+
+const Board = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+const Row = styled.div`
+  display: flex;
+  gap: 8px;
+`
+const Letter = styled.div`
+  flex: 1;
+  height: 100px;
+  width: 100px;
+  border: 2px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: ${props => LETTER_STATE_COLORS[props.state].background};
+  border-color: ${props => LETTER_STATE_COLORS[props.state].border};
+`
+
+const StatusText = styled.div``
+const Controls = styled.div``
+const SubmitButton = styled.button``
+
+const generateRowData = () => {
+  const newRows = []
+
+  for (let i = 1; i <= GRID_ROWS; i++) {
+    const newRow = []
+
+    for (let i = 1; i <= GRID_COLS; i++) {
+      const characters = 'abcdefghijklmnopqrstuvwxyz'
+      const charactersLength = characters.length
+
+      const newChar = characters.charAt(Math.floor(Math.random() * charactersLength))
+
+      newRow.push(newChar)
+    }
+
+    newRows.push(newRow)
+  }
+
+  return newRows;
+}
+
 function App() {
   const [gameState, setGameState] = useState(GAME_STATES.default)
 
   const [rows, setRows] = useState([])
   const [word, setWord] = useState([])
 
+  const setupRows = () => {
+    const data = generateRowData()
+    setRows(data)
+  }
+
   useEffect(() => {
-    const newRows = []
-
-    for (let i = 1; i <= GRID_ROWS; i++) {
-      const newRow = []
-
-      for (let i = 1; i <= GRID_COLS; i++) {
-        const characters = 'abcdefghijklmnopqrstuvwxyz'
-        const charactersLength = characters.length
-
-        const newChar = characters.charAt(Math.floor(Math.random() * charactersLength))
-
-        newRow.push(newChar)
-      }
-
-      newRows.push(newRow)
-    }
-
-    setRows(newRows)
+    setupRows()
   }, [])
 
-  const toggleSelectChar = (rowIndex, charIndex, char) => {
+  const handleWinGame = () => {
+    setGameState(GAME_STATES.win)
+  }
+  const handleLoseGame = () => {
+    setGameState(GAME_STATES.loss)
+  }
+  const handleResetGame = () => {
+    setGameState(GAME_STATES.default)
+    setWord([])
+  }
+
+  const getLetterState = (rowIndex, charIndex) => {
+    let state = LETTER_STATES.default
+
+    const isGameOverWin = gameState === GAME_STATES.win
+    const isGameOverLoss = gameState === GAME_STATES.loss
+    const isLetterSelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
+
+    if (isLetterSelected) {
+      if (isGameOverWin) {
+        state = LETTER_STATES.win
+      } else if (isGameOverLoss) {
+        state = LETTER_STATES.loss
+      } else {
+        state = LETTER_STATES.selected
+      }
+    }
+
+    return state
+  }
+  const getAvailableOptions = () => { }
+
+  const handleSelectLetter = (rowIndex, charIndex, char) => {
     const newRows = [...rows]
     const newChar = { rowIndex, charIndex, char }
 
@@ -74,65 +175,60 @@ function App() {
     setWord(newWord)
     setRows(newRows)
   }
-
-  const submitWord = () => {
+  const handleSubmitWord = () => {
     const foundWord = dictionary[word.join('')]
 
     if (foundWord) {
-      setGameState(GAME_STATES.win)
+      handleWinGame()
     } else {
-      setGameState(GAME_STATES.loss)
+      handleLoseGame()
     }
 
     setTimeout(() => {
-      setGameState(GAME_STATES.default)
-      setWord([])
-    }, 500)
+      handleResetGame()
+    }, END_GAME_RESET_DELAY)
   }
 
   return (
-    <div className="App">
-      <div className="inner">
-
-        <div className="Board">
-          {rows.map((row, rowIndex) => {
-            return (
-              <div className="Row">
-                {row.map((char, charIndex) =>
-                  <div
-                    className={`
-                      Col 
-                      ${word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex) ? "is-active" : null}
-                      game-${gameState}
-                    `}
-                    onClick={() => {
-                      toggleSelectChar(rowIndex, charIndex, char)
-                    }}
-                  >
-                    {char}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        <div className="controls">
-          <div>
+    <Game>
+      <GameInner>
+        <Board>
+          {
+            rows.map((chars, rowIndex) => (
+              <Row>
+                {
+                  chars.map((char, charIndex) => (
+                    <Letter
+                      state={getLetterState()}
+                      onClick={() => handleSelectLetter(rowIndex, charIndex, char)}
+                    >
+                      {char}
+                    </Letter>
+                  ))
+                }
+              </Row>
+            ))
+          }
+        </Board>
+        <GameBar>
+          <StatusText>
             {
               gameState === GAME_STATES.default && word.length > 0
                 ? word.map(item => item.char).join('')
                 : STATUS_TEXTS[GAME_STATES[gameState]]
             }
-          </div>
-
-          <div>
-            <button disabled={word.length < WORD_MIN_LENGTH} onClick={submitWord}>Submit Word</button>
-          </div>
-        </div>
-
-      </div>
-    </div >
+          </StatusText>
+          <Controls>
+            <SubmitButton
+              disabled={word.length < WORD_MIN_LENGTH}
+              onClick={handleSubmitWord}
+            >
+              submit
+            </SubmitButton>
+          </Controls>
+        </GameBar>
+      </GameInner>
+    </Game>
   )
 }
 
