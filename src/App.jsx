@@ -23,6 +23,11 @@ const GAME_STATES = {
   win: 'win',
   loss: 'loss'
 }
+const STATUS_TEXTS = {
+  [GAME_STATES.default]: 'Select some letters...',
+  [GAME_STATES.win]: 'Great! You win.',
+  [GAME_STATES.loss]: 'Not a word. Try again.',
+}
 
 function App() {
   const [gameState, setGameState] = useState(GAME_STATES.default)
@@ -86,23 +91,12 @@ function App() {
   }
 
   const getStatusText = () => {
-    let statusText = 'Select some letters...'
+    let statusText = STATUS_TEXTS[GAME_STATES.default]
 
-    switch (gameState) {
-
-      case GAME_STATES.win:
-        statusText = 'Great! You win.'
-        break;
-
-      case GAME_STATES.loss:
-        statusText = 'Not a word. Try again.'
-        break;
-
-      default:
-        if (word.length > 0) {
-          statusText = word.map(item => item.char).join('')
-        }
-        break;
+    if (word.length > 0) {
+      statusText = word.map(item => item.char).join('')
+    } else {
+      statusText = STATUS_TEXTS[GAME_STATES[gameState]]
     }
 
     return statusText
