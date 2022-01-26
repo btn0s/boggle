@@ -127,7 +127,7 @@ function App() {
   const [dictionary, setDictionary] = useState()
 
   const [rows, setRows] = useState([])
-  const [word, setWord] = useState([])
+  const [word, setWord] = useState(['d','e','a','d'])
 
   const fetchDictionary = async () => {
     const res = await fetch('https://raw.githubusercontent.com/btn0s/boggle/main/src/dictionary.json')
@@ -176,7 +176,7 @@ function App() {
     setRows(newRows)
   }
   const handleSubmitWord = () => {
-    const foundWord = dictionary[word.join('')]
+    const foundWord = dictionary[word.map(e => e.char).join('')]
 
     if (foundWord) {
       handleWinGame()
