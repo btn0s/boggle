@@ -127,7 +127,7 @@ function App() {
   const [dictionary, setDictionary] = useState()
 
   const [rows, setRows] = useState([])
-  const [word, setWord] = useState(['d','e','a','d'])
+  const [word, setWord] = useState([])
 
   const fetchDictionary = async () => {
     const res = await fetch('https://raw.githubusercontent.com/btn0s/boggle/main/src/dictionary.json')
