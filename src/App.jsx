@@ -81,8 +81,24 @@ const Letter = styled.div`
   justify-content: center;
   align-items: center;
   flex-direction: column;
-  background: ${props => LETTER_STATE_COLORS[props.state].background};
-  border-color: ${props => LETTER_STATE_COLORS[props.state].border};
+  background: ${props =>
+    props.selected
+      ? props.state === GAME_STATES.win
+        ? LETTER_STATE_COLORS.win.background
+        : props.state === GAME_STATES.loss
+          ? LETTER_STATE_COLORS.loss.background
+          : LETTER_STATE_COLORS.selected.background
+      : LETTER_STATE_COLORS.default.background
+  };
+  border-color: ${props =>
+    props.selected
+      ? props.state === GAME_STATES.win
+        ? LETTER_STATE_COLORS.win.border
+        : props.state === GAME_STATES.loss
+          ? LETTER_STATE_COLORS.loss.border
+          : LETTER_STATE_COLORS.selected.border
+      : LETTER_STATE_COLORS.default.border
+  };
 `
 
 const StatusText = styled.div``
@@ -97,10 +113,7 @@ const generateRowData = () => {
 
     for (let i = 1; i <= GRID_COLS; i++) {
       const characters = 'abcdefghijklmnopqrstuvwxyz'
-      const charactersLength = characters.length
-
-      const newChar = characters.charAt(Math.floor(Math.random() * charactersLength))
-
+      const newChar = characters.charAt(Math.floor(Math.random() * characters.length))
       newRow.push(newChar)
     }
 
@@ -136,25 +149,6 @@ function App() {
     setWord([])
   }
 
-  const getLetterState = (rowIndex, charIndex) => {
-    let state = LETTER_STATES.default
-
-    const isGameOverWin = gameState === GAME_STATES.win
-    const isGameOverLoss = gameState === GAME_STATES.loss
-    const isLetterSelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
-
-    if (isLetterSelected) {
-      if (isGameOverWin) {
-        state = LETTER_STATES.win
-      } else if (isGameOverLoss) {
-        state = LETTER_STATES.loss
-      } else {
-        state = LETTER_STATES.selected
-      }
-    }
-
-    return state
-  }
   const getAvailableOptions = () => { }
 
   const handleSelectLetter = (rowIndex, charIndex, char) => {
@@ -192,14 +186,16 @@ function App() {
   return (
     <Game>
       <GameInner>
-        <Board>
+        <Board state={gameState}>
           {
             rows.map((chars, rowIndex) => (
-              <Row>
+              <Row key={rowIndex}>
                 {
                   chars.map((char, charIndex) => (
                     <Letter
-                      state={getLetterState()}
+                      key={charIndex}
+                      state={gameState}
+                      selected={word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)}
                       onClick={() => handleSelectLetter(rowIndex, charIndex, char)}
                     >
                       {char}
