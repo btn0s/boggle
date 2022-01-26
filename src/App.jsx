@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import styled from 'styled-components'
 
-import dictionary from './dictionary.json'
 import './App.css'
 
 /* 
@@ -125,16 +124,23 @@ const generateRowData = () => {
 
 function App() {
   const [gameState, setGameState] = useState(GAME_STATES.default)
+  const [dictionary, setDictionary] = useState()
 
   const [rows, setRows] = useState([])
   const [word, setWord] = useState([])
 
+  const fetchDictionary = async () => {
+    const res = await fetch('https://raw.githubusercontent.com/btn0s/boggle/main/src/dictionary.json')
+    const json = await res.json()
+    setDictionary(json)
+  }
   const setupRows = () => {
     const data = generateRowData()
     setRows(data)
   }
 
   useEffect(() => {
+    fetchDictionary()
     setupRows()
   }, [])
 
