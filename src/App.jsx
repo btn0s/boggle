@@ -199,7 +199,7 @@ function App() {
 
       for (let i = rowStart; i <= rowEnd; i++) {
         for (let i2 = charStart; i2 <= charEnd; i2++) {
-          if (i === rowIndex && i2 === charIndex) {
+          if (word.some(char => char.rowIndex === 1 && char.charIndex === 12)) {
             continue
           }
           newAvailableMoves.push({
