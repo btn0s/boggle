@@ -18,6 +18,7 @@ const GRID_ROWS = 4
 const GRID_COLS = 4
 const WORD_MIN_LENGTH = 3
 const END_GAME_RESET_DELAY = 1000
+const RESHUFFLE_LIMIT = 100
 
 const GAME_STATES = {
   default: 'default',
@@ -101,8 +102,12 @@ const Letter = styled.div`
 `
 
 const StatusText = styled.div``
-const Controls = styled.div``
+const Controls = styled.div`
+  display: flex;
+  gap: 8px;
+`
 const SubmitButton = styled.button``
+const ReshuffleButton = styled.button``
 
 const generateRowData = () => {
   const newRows = []
@@ -137,6 +142,18 @@ function App() {
   const setupRows = () => {
     const data = generateRowData()
     setRows(data)
+  }
+
+  let reshuffleDur = 10
+  const handleReshuffle = () => {
+    handleResetGame()
+    setTimeout(() => {
+      setupRows()
+      if (reshuffleDur <= RESHUFFLE_LIMIT) {
+        reshuffleDur += 10
+        handleReshuffle()
+      }
+    }, reshuffleDur)
   }
 
   useEffect(() => {
@@ -221,6 +238,7 @@ function App() {
             }
           </StatusText>
           <Controls>
+            <ReshuffleButton onClick={handleReshuffle}>reshuffle</ReshuffleButton>
             <SubmitButton
               disabled={word.length < WORD_MIN_LENGTH}
               onClick={handleSubmitWord}
