@@ -28,6 +28,7 @@ const GAME_STATES = {
 const LETTER_STATES = {
   default: 'default',
   selected: 'selected',
+  available: 'available',
   win: 'win',
   loss: 'loss'
 }
@@ -40,6 +41,7 @@ const STATUS_TEXTS = {
 const LETTER_STATE_COLORS = {
   [LETTER_STATES.default]: { border: 'black', background: 'white' },
   [LETTER_STATES.selected]: { border: 'navy', background: 'lightsteelblue' },
+  [LETTER_STATES.available]: { border: 'darkgoldenrod', background: 'beige' },
   [LETTER_STATES.win]: { border: 'darkgreen', background: 'lightgreen' },
   [LETTER_STATES.loss]: { border: 'darkred', background: 'lightpink' },
 }
@@ -88,7 +90,9 @@ const Letter = styled.div`
         : props.state === GAME_STATES.loss
           ? LETTER_STATE_COLORS.loss.background
           : LETTER_STATE_COLORS.selected.background
-      : LETTER_STATE_COLORS.default.background
+      : props.available
+        ? LETTER_STATE_COLORS.available.background
+        : LETTER_STATE_COLORS.default.background
   };
   border-color: ${props =>
     props.selected
@@ -97,7 +101,9 @@ const Letter = styled.div`
         : props.state === GAME_STATES.loss
           ? LETTER_STATE_COLORS.loss.border
           : LETTER_STATE_COLORS.selected.border
-      : LETTER_STATE_COLORS.default.border
+      : props.available
+        ? LETTER_STATE_COLORS.available.border
+        : LETTER_STATE_COLORS.default.border
   };
 `
 
@@ -134,6 +140,8 @@ function App() {
   const [rows, setRows] = useState([])
   const [word, setWord] = useState([])
 
+  const [availableMoves, setAvailableMoves] = useState([])
+
   const fetchDictionary = async () => {
     const res = await fetch('https://raw.githubusercontent.com/btn0s/boggle/main/src/dictionary.json')
     const json = await res.json()
@@ -158,7 +166,7 @@ function App() {
 
   useEffect(() => {
     fetchDictionary()
-    setupRows()
+    handleReshuffle()
   }, [])
 
   const handleWinGame = () => {
@@ -172,13 +180,50 @@ function App() {
     setWord([])
   }
 
-  const getAvailableOptions = () => { }
+  const getAvailableMoves = () => {
+    if (word.length > 0) {
+      const lastCharInWord = word[word.length - 1]
+      const { rowIndex, charIndex } = lastCharInWord;
+
+      const isTopRow = rowIndex === 0
+      const isBottomRow = rowIndex === GRID_ROWS - 1
+      const isFirstChar = charIndex === 0
+      const isLastChar = charIndex === GRID_COLS - 1
+
+      const rowStart = isTopRow ? rowIndex : rowIndex - 1
+      const rowEnd = isBottomRow ? rowIndex : rowIndex + 1
+      const charStart = isFirstChar ? charIndex : charIndex - 1
+      const charEnd = isLastChar ? charIndex : charIndex + 1
+
+      const newAvailableMoves = []
+
+      for (let i = rowStart; i <= rowEnd; i++) {
+        for (let i2 = charStart; i2 <= charEnd; i2++) {
+          if (i === rowIndex && i2 === charIndex) {
+            continue
+          }
+          newAvailableMoves.push({
+            rowIndex: i,
+            charIndex: i2
+          })
+        }
+      }
+
+      setAvailableMoves(newAvailableMoves)
+    } else {
+      setAvailableMoves([])
+    }
+  }
+  useEffect(() => { getAvailableMoves() }, [word])
 
   const handleSelectLetter = (rowIndex, charIndex, char) => {
+    const isCharAlreadySelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
+    const isValidSelection = word.length === 0 || availableMoves.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex) || isCharAlreadySelected
+
+    if (!isValidSelection) return
+
     const newRows = [...rows]
     const newChar = { rowIndex, charIndex, char }
-
-    const isCharAlreadySelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
 
     let newWord = [...word]
 
@@ -219,6 +264,7 @@ function App() {
                       key={charIndex}
                       state={gameState}
                       selected={word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)}
+                      available={availableMoves.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)}
                       onClick={() => handleSelectLetter(rowIndex, charIndex, char)}
                     >
                       {char}
@@ -238,7 +284,7 @@ function App() {
             }
           </StatusText>
           <Controls>
-            <ReshuffleButton onClick={handleReshuffle}>reshuffle</ReshuffleButton>
+            {/* <ReshuffleButton onClick={handleReshuffle}>reshuffle</ReshuffleButton> */}
             <SubmitButton
               disabled={word.length < WORD_MIN_LENGTH}
               onClick={handleSubmitWord}
