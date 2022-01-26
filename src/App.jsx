@@ -17,12 +17,20 @@ import './App.css'
 
 const GRID_ROWS = 4
 const GRID_COLS = 4
+const WORD_MIN_LENGTH = 3
+const GAME_STATES = {
+  default: 'default',
+  win: 'win',
+  loss: 'loss'
+}
 
 function App() {
+  const [gameState, setGameState] = useState(GAME_STATES.default)
+
   const [rows, setRows] = useState([])
   const [word, setWord] = useState([])
 
-  useEffect(()=>{
+  useEffect(() => {
     const newRows = []
 
     for (let i = 1; i <= GRID_ROWS; i++) {
@@ -32,10 +40,9 @@ function App() {
         const characters = 'abcdefghijklmnopqrstuvwxyz'
         const charactersLength = characters.length
 
-        newRow.push({
-          char: characters.charAt(Math.floor(Math.random() * charactersLength)),
-          selected: false
-        })
+        const newChar = characters.charAt(Math.floor(Math.random() * charactersLength))
+
+        newRow.push(newChar)
       }
 
       newRows.push(newRow)
@@ -46,22 +53,20 @@ function App() {
 
   const toggleSelectChar = (rowIndex, charIndex, char) => {
     const newRows = [...rows]
-    const { selected } = newRows[rowIndex][charIndex]
+    const newChar = { rowIndex, charIndex, char }
 
-    if (!selected) {
-      const newWord = [...word, char]
-      console.log(newWord)
-      setWord(newWord)
-    } else {
-      const newWord = [...word]
-      const indexToRemove = newWord.indexOf(char)
+    const isCharAlreadySelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
+
+    let newWord = [...word]
+
+    if (isCharAlreadySelected) {
+      const indexToRemove = newWord.map(item => item.char).indexOf(char)
       newWord.splice(indexToRemove, 1)
-      console.log(newWord)
-      setWord(newWord)
+    } else {
+      newWord.push(newChar)
     }
 
-    newRows[rowIndex][charIndex].selected = !selected
-
+    setWord(newWord)
     setRows(newRows)
   }
 
@@ -69,12 +74,38 @@ function App() {
     const foundWord = dictionary[word.join('')]
 
     if (foundWord) {
-      alert('you win')
+      setGameState(GAME_STATES.win)
     } else {
-      alert('try again')
+      setGameState(GAME_STATES.loss)
     }
 
-    setWord([])
+    setTimeout(() => {
+      setGameState(GAME_STATES.default)
+      setWord([])
+    }, 500)
+  }
+
+  const getStatusText = () => {
+    let statusText = 'Select some letters...'
+
+    switch (gameState) {
+
+      case GAME_STATES.win:
+        statusText = 'Great! You win.'
+        break;
+
+      case GAME_STATES.loss:
+        statusText = 'Not a word. Try again.'
+        break;
+
+      default:
+        if (word.length > 0) {
+          statusText = word.map(item => item.char).join('')
+        }
+        break;
+    }
+
+    return statusText
   }
 
   return (
@@ -82,33 +113,40 @@ function App() {
       <div className="inner">
 
         <div className="Board">
-          {rows.map((row, rowIndex)=>{
+          {rows.map((row, rowIndex) => {
             return (
               <div className="Row">
-                {row.map(({ char, selected }, charIndex)=>
-                  <div className="Col" onClick={()=>{ toggleSelectChar(rowIndex, charIndex, char) }}>
+                {row.map((char, charIndex) =>
+                  <div
+                    className={`
+                      Col 
+                      ${word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex) ? "is-active" : null}
+                      game-${gameState}
+                    `}
+                    onClick={() => {
+                      toggleSelectChar(rowIndex, charIndex, char)
+                    }}
+                  >
                     {char}
-                      <small>
-                        {selected ? "selected" : null}
-                      </small>
                   </div>
                 )}
               </div>
             )
           })}
         </div>
-        
+
         <div className="controls">
           <div>
-            {word.join('')}
+            {getStatusText()}
           </div>
+
           <div>
-            <button onClick={submitWord}>Submit Word</button>
+            <button disabled={word.length < WORD_MIN_LENGTH} onClick={submitWord}>Submit Word</button>
           </div>
         </div>
 
       </div>
-    </div>
+    </div >
   )
 }
 
