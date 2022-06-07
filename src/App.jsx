@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
-
-import dictionary from './dictionary.json'
+import React, { useEffect, useState } from 'react'
+import styled from 'styled-components'
 
 import './App.css'
 
@@ -17,98 +16,285 @@ import './App.css'
 
 const GRID_ROWS = 4
 const GRID_COLS = 4
+const WORD_MIN_LENGTH = 3
+const END_GAME_RESET_DELAY = 1000
+const RESHUFFLE_LIMIT = 100
+
+const GAME_STATES = {
+  default: 'default',
+  win: 'win',
+  loss: 'loss'
+}
+const LETTER_STATES = {
+  default: 'default',
+  selected: 'selected',
+  available: 'available',
+  win: 'win',
+  loss: 'loss'
+}
+const STATUS_TEXTS = {
+  [GAME_STATES.default]: 'Select some letters...',
+  [GAME_STATES.win]: 'Great! You win.',
+  [GAME_STATES.loss]: 'Not a word. Try again.',
+}
+
+const LETTER_STATE_COLORS = {
+  [LETTER_STATES.default]: { border: 'black', background: 'white' },
+  [LETTER_STATES.selected]: { border: 'navy', background: 'lightsteelblue' },
+  [LETTER_STATES.available]: { border: 'darkgoldenrod', background: 'beige' },
+  [LETTER_STATES.win]: { border: 'darkgreen', background: 'lightgreen' },
+  [LETTER_STATES.loss]: { border: 'darkred', background: 'lightpink' },
+}
+
+const Game = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100vh;
+  `
+const GameInner = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  max-width: 500px;
+`
+const GameBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+`
+
+const Board = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+const Row = styled.div`
+  display: flex;
+  gap: 8px;
+`
+const Letter = styled.div`
+  flex: 1;
+  height: 100px;
+  width: 100px;
+  border: 2px solid black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  background: ${props =>
+    props.selected
+      ? props.state === GAME_STATES.win
+        ? LETTER_STATE_COLORS.win.background
+        : props.state === GAME_STATES.loss
+          ? LETTER_STATE_COLORS.loss.background
+          : LETTER_STATE_COLORS.selected.background
+      : props.available
+        ? LETTER_STATE_COLORS.available.background
+        : LETTER_STATE_COLORS.default.background
+  };
+  border-color: ${props =>
+    props.selected
+      ? props.state === GAME_STATES.win
+        ? LETTER_STATE_COLORS.win.border
+        : props.state === GAME_STATES.loss
+          ? LETTER_STATE_COLORS.loss.border
+          : LETTER_STATE_COLORS.selected.border
+      : props.available
+        ? LETTER_STATE_COLORS.available.border
+        : LETTER_STATE_COLORS.default.border
+  };
+`
+
+const StatusText = styled.div``
+const Controls = styled.div`
+  display: flex;
+  gap: 8px;
+`
+const SubmitButton = styled.button``
+const ReshuffleButton = styled.button``
+
+const generateRowData = () => {
+  const newRows = []
+
+  for (let i = 1; i <= GRID_ROWS; i++) {
+    const newRow = []
+
+    for (let i = 1; i <= GRID_COLS; i++) {
+      const characters = 'abcdefghijklmnopqrstuvwxyz'
+      const newChar = characters.charAt(Math.floor(Math.random() * characters.length))
+      newRow.push(newChar)
+    }
+
+    newRows.push(newRow)
+  }
+
+  return newRows;
+}
 
 function App() {
+  const [gameState, setGameState] = useState(GAME_STATES.default)
+  const [dictionary, setDictionary] = useState()
+
   const [rows, setRows] = useState([])
   const [word, setWord] = useState([])
 
-  useEffect(()=>{
-    const newRows = []
+  const [availableMoves, setAvailableMoves] = useState([])
 
-    for (let i = 1; i <= GRID_ROWS; i++) {
-      const newRow = []
-
-      for (let i = 1; i <= GRID_COLS; i++) {
-        const characters = 'abcdefghijklmnopqrstuvwxyz'
-        const charactersLength = characters.length
-
-        newRow.push({
-          char: characters.charAt(Math.floor(Math.random() * charactersLength)),
-          selected: false
-        })
-      }
-
-      newRows.push(newRow)
-    }
-
-    setRows(newRows)
-  }, [])
-
-  const toggleSelectChar = (rowIndex, charIndex, char) => {
-    const newRows = [...rows]
-    const { selected } = newRows[rowIndex][charIndex]
-
-    if (!selected) {
-      const newWord = [...word, char]
-      console.log(newWord)
-      setWord(newWord)
-    } else {
-      const newWord = [...word]
-      const indexToRemove = newWord.indexOf(char)
-      newWord.splice(indexToRemove, 1)
-      console.log(newWord)
-      setWord(newWord)
-    }
-
-    newRows[rowIndex][charIndex].selected = !selected
-
-    setRows(newRows)
+  const fetchDictionary = async () => {
+    const res = await fetch('https://raw.githubusercontent.com/btn0s/boggle/main/src/dictionary.json')
+    const json = await res.json()
+    setDictionary(json)
+  }
+  const setupRows = () => {
+    const data = generateRowData()
+    setRows(data)
   }
 
-  const submitWord = () => {
-    const foundWord = dictionary[word.join('')]
+  let reshuffleDur = 10
+  const handleReshuffle = () => {
+    handleResetGame()
+    setTimeout(() => {
+      setupRows()
+      if (reshuffleDur <= RESHUFFLE_LIMIT) {
+        reshuffleDur += 10
+        handleReshuffle()
+      }
+    }, reshuffleDur)
+  }
 
-    if (foundWord) {
-      alert('you win')
-    } else {
-      alert('try again')
-    }
+  useEffect(() => {
+    fetchDictionary()
+    handleReshuffle()
+  }, [])
 
+  const handleWinGame = () => {
+    setGameState(GAME_STATES.win)
+  }
+  const handleLoseGame = () => {
+    setGameState(GAME_STATES.loss)
+  }
+  const handleResetGame = () => {
+    setGameState(GAME_STATES.default)
     setWord([])
   }
 
+  const getAvailableMoves = () => {
+    if (word.length > 0) {
+      const lastCharInWord = word[word.length - 1]
+      const { rowIndex, charIndex } = lastCharInWord;
+
+      const isTopRow = rowIndex === 0
+      const isBottomRow = rowIndex === GRID_ROWS - 1
+      const isFirstChar = charIndex === 0
+      const isLastChar = charIndex === GRID_COLS - 1
+
+      const rowStart = isTopRow ? rowIndex : rowIndex - 1
+      const rowEnd = isBottomRow ? rowIndex : rowIndex + 1
+      const charStart = isFirstChar ? charIndex : charIndex - 1
+      const charEnd = isLastChar ? charIndex : charIndex + 1
+
+      const newAvailableMoves = []
+
+      for (let i = rowStart; i <= rowEnd; i++) {
+        for (let i2 = charStart; i2 <= charEnd; i2++) {
+          if (word.some(char => char.rowIndex === 1 && char.charIndex === 12)) {
+            continue
+          }
+          newAvailableMoves.push({
+            rowIndex: i,
+            charIndex: i2
+          })
+        }
+      }
+
+      setAvailableMoves(newAvailableMoves)
+    } else {
+      setAvailableMoves([])
+    }
+  }
+  useEffect(() => { getAvailableMoves() }, [word])
+
+  const handleSelectLetter = (rowIndex, charIndex, char) => {
+    const isCharAlreadySelected = word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)
+    const isValidSelection = word.length === 0 || availableMoves.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex) || isCharAlreadySelected
+
+    if (!isValidSelection) return
+
+    const newRows = [...rows]
+    const newChar = { rowIndex, charIndex, char }
+
+    let newWord = [...word]
+
+    if (isCharAlreadySelected) {
+      const indexToRemove = newWord.map(item => item.char).indexOf(char)
+      newWord.splice(indexToRemove, 1)
+    } else {
+      newWord.push(newChar)
+    }
+
+    setWord(newWord)
+    setRows(newRows)
+  }
+  const handleSubmitWord = () => {
+    const foundWord = dictionary[word.map(e => e.char).join('')]
+
+    if (foundWord) {
+      handleWinGame()
+    } else {
+      handleLoseGame()
+    }
+
+    setTimeout(() => {
+      handleResetGame()
+    }, END_GAME_RESET_DELAY)
+  }
+
   return (
-    <div className="App">
-      <div className="inner">
-
-        <div className="Board">
-          {rows.map((row, rowIndex)=>{
-            return (
-              <div className="Row">
-                {row.map(({ char, selected }, charIndex)=>
-                  <div className="Col" onClick={()=>{ toggleSelectChar(rowIndex, charIndex, char) }}>
-                    {char}
-                      <small>
-                        {selected ? "selected" : null}
-                      </small>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-        
-        <div className="controls">
-          <div>
-            {word.join('')}
-          </div>
-          <div>
-            <button onClick={submitWord}>Submit Word</button>
-          </div>
-        </div>
-
-      </div>
-    </div>
+    <Game>
+      <GameInner>
+        <Board state={gameState}>
+          {
+            rows.map((chars, rowIndex) => (
+              <Row key={rowIndex}>
+                {
+                  chars.map((char, charIndex) => (
+                    <Letter
+                      key={charIndex}
+                      state={gameState}
+                      selected={word.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)}
+                      available={availableMoves.some(char => char.rowIndex === rowIndex && char.charIndex === charIndex)}
+                      onClick={() => handleSelectLetter(rowIndex, charIndex, char)}
+                    >
+                      {char}
+                    </Letter>
+                  ))
+                }
+              </Row>
+            ))
+          }
+        </Board>
+        <GameBar>
+          <StatusText>
+            {
+              gameState === GAME_STATES.default && word.length > 0
+                ? word.map(item => item.char).join('')
+                : STATUS_TEXTS[GAME_STATES[gameState]]
+            }
+          </StatusText>
+          <Controls>
+            {/* <ReshuffleButton onClick={handleReshuffle}>reshuffle</ReshuffleButton> */}
+            <SubmitButton
+              disabled={word.length < WORD_MIN_LENGTH}
+              onClick={handleSubmitWord}
+            >
+              submit
+            </SubmitButton>
+          </Controls>
+        </GameBar>
+      </GameInner>
+    </Game>
   )
 }
 
